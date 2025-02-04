@@ -40,7 +40,10 @@ func main() {
 	flag.Parse()
 
 	// Inisitalize a new structured logger.
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,  		// the filename & line number of the calling source code
+		Level: slog.LevelDebug,	// the minimum log level
+	}))
 
 	// Declare an instance of the application struct.
 	app := &application{
