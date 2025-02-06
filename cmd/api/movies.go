@@ -33,7 +33,8 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		Version:   1,
 	}
 
-	err = app.writeJSON(w, movie, http.StatusOK, nil)
+	// Pass an *envelop map* instead of passing the plain movie struct.
+	err = app.writeJSON(w, envelope{"movie": movie}, http.StatusOK, nil)
 	if err != nil {
 		app.logger.Error(err.Error())
 		msg := "Server encountered an issue & could not process your request"

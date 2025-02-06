@@ -22,14 +22,16 @@ import (
 
 
 func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	// Hold the information we want to send in the response in a map:
-	data := map[string]string{
+	// Declare an *envelop map*, containing the info for the response.
+	info := envelope{
 		"status": "available",
-		"environment": app.config.env,
-		"version": version,
+		"system_info": map[string]string{
+			"environment": app.config.env,
+			"version":     version,
+		},
 	}
 
-	err := app.writeJSON(w, data, http.StatusOK, nil)
+	err := app.writeJSON(w, info, http.StatusOK, nil)
 	if err != nil {
 		app.logger.Error(err.Error())
 		msg := "Server encountered an issue & could not process your request"

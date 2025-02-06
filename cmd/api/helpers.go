@@ -9,6 +9,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// Define an envelope type (for json formatting).
+type envelope map[string]any
 
 func (app *application) readIDParam(r *http.Request) (int64, error) {
 	// .ParamsFromContext() returns a slice containing names & values of the parameters.
@@ -26,7 +28,7 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 // data: data to encode to JSON
 // status: the HTTP status code to send
 // headers: header map containing additional HTTP headers to include in the response.
-func (app *application) writeJSON(w http.ResponseWriter, data any, status int, headers http.Header) error {
+func (app *application) writeJSON(w http.ResponseWriter, data envelope, status int, headers http.Header) error {
 	// json.Marshal() returns a `[]byte` slice containing the encoded JSON.
 	// js, err := json.Marshal(data)
 	// *MarshalIndent* for better readability of JSON in terminal.
