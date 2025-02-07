@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -55,11 +56,23 @@ func (app *application) writeJSON(w http.ResponseWriter, data envelope, status i
 }
 
 
-func (app *application) readJSON(r *http.Request, dst any) error {
+func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	// Limit the size of the request body to 1MB.
+	maxBytes := 1_048_576
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+
+	// Initialize the json.Decoder.
+	dec := json.NewDecoder(r.Body)
+	// Make sure if the JSON sent by client does NOT include unkown fields.
+	// As expected by the target destination.
+	// This way, Decode() returns an error message like: "json: unknown field <fieldName>"
+	// N.B. default behavior is to ignore.
+	dec.DisallowUnknownFields()
+
 	// Decode the body content into the target destination.
 	// You have to add a *non nil pointer* as the target decode destination to `.Decode()`
 	// Otherwise, you'll get `json.InvalidUnmarshalError` at runtime.
-	err := json.NewDecoder(r.Body).Decode(dst)
+	err := dec.Decode(dst)
 	if err != nil {
 		// If there's an error during decoding, start the triage...
 		var syntaxErr			*json.SyntaxError
@@ -86,6 +99,10 @@ func (app *application) readJSON(r *http.Request, dst any) error {
 		// curl -X POST localhost:4000/v1/movies
 		case errors.Is(err, io.EOF):
 			return errors.New("body must not be empty")
+
+		case strings.HasPrefix(err.Error(), "json: unknown field "):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
+			return fmt.Errorf("body contains unknown key %q", fieldName)
 
 		// json.InvalidUnmarshalError is returned if we pass sth that's NOT a non-nil pointer to Decode()
 		// Catch this & panic.
