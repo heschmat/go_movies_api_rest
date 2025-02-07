@@ -57,6 +57,7 @@ func (app *application) writeJSON(w http.ResponseWriter, data envelope, status i
 
 
 func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+
 	// Limit the size of the request body to 1MB.
 	maxBytes := 1_048_576
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
@@ -79,7 +80,12 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 		var unmarshalTypeErr	*json.UnmarshalTypeError
 		var InvalidUnmarshalErr *json.InvalidUnmarshalError
 
+		var maxBytesErr			*http.MaxBytesError
+
 		switch {
+		case errors.As(err, &maxBytesErr):
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytesErr.Limit)
+
 		// curl -d '{"title": "creed I",}' localhost:4000/v1/movie
 		case errors.As(err, &syntaxErr):
 			msg := "1body contains badly-formed JSON (at character %d)"
@@ -113,6 +119,14 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 		default:
 			return err
 		}
+	}
+
+	// Call Decode() again.
+	// If the request body only contains a single JSON value, the call returns *io.EOF error*.
+	// Otherwise, there's additional data in the request body, which we don't desire.
+	err = dec.Decode(&struct{}{})
+	if !errors.Is(err, io.EOF) {
+		return errors.New("body must only contain a single JSON value")
 	}
 
 	return nil
