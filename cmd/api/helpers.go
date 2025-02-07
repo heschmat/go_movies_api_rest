@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -48,6 +50,53 @@ func (app *application) writeJSON(w http.ResponseWriter, data envelope, status i
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	w.Write(js)
+
+	return nil
+}
+
+
+func (app *application) readJSON(r *http.Request, dst any) error {
+	// Decode the body content into the target destination.
+	// You have to add a *non nil pointer* as the target decode destination to `.Decode()`
+	// Otherwise, you'll get `json.InvalidUnmarshalError` at runtime.
+	err := json.NewDecoder(r.Body).Decode(dst)
+	if err != nil {
+		// If there's an error during decoding, start the triage...
+		var syntaxErr			*json.SyntaxError
+		var unmarshalTypeErr	*json.UnmarshalTypeError
+		var InvalidUnmarshalErr *json.InvalidUnmarshalError
+
+		switch {
+		// curl -d '{"title": "creed I",}' localhost:4000/v1/movie
+		case errors.As(err, &syntaxErr):
+			msg := "1body contains badly-formed JSON (at character %d)"
+			return fmt.Errorf(msg, syntaxErr.Offset)
+
+		case errors.Is(err, io.ErrUnexpectedEOF):
+			return errors.New("2body contains badly-formed JSON")
+
+		case errors.As(err, &unmarshalTypeErr):
+			// curl -d '{"year": "10"}' localhost:4000/v1/movies
+			if unmarshalTypeErr.Field != "" {
+				return fmt.Errorf("3abody contains incorrect JSON type for field %q", unmarshalTypeErr.Field)
+			}
+			// curl -d '["title", "creed I"]' localhost:4000/v1/movies
+			return fmt.Errorf("3bbody contains incorrect JSON type (at character %d)", unmarshalTypeErr.Offset)
+
+		// curl -X POST localhost:4000/v1/movies
+		case errors.Is(err, io.EOF):
+			return errors.New("body must not be empty")
+
+		// json.InvalidUnmarshalError is returned if we pass sth that's NOT a non-nil pointer to Decode()
+		// Catch this & panic.
+		case errors.As(err, &InvalidUnmarshalErr):
+			panic(err)
+
+		// For anything else, return the error message as-is.
+		default:
+			return err
+		}
+	}
 
 	return nil
 }

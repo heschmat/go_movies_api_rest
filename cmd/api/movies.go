@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -20,14 +19,15 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		Genres  []string	`json:"genres"`
 	}
 
-	// Decode the body content into the `input` struct.
-	err := json.NewDecoder(r.Body).Decode(&input)
+	err := app.readJSON(r, &input)
 	if err != nil {
-		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
+		app.badRequestResponse(w, r, err)
 		return
 	}
 
 	// Dump the contents of the input struct in a HTTP response.
+	// `%+v` prints struct fields along with their names. {"title": "still alice", "year": 2014}
+	// `%v` prints the value in its default format: {"still alice", 2014}
 	fmt.Fprintf(w, "%+v\n", input)
 }
 
