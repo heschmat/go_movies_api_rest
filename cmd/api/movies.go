@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/heschmat/go_movies_api_rest/internal/data"
+	"github.com/heschmat/go_movies_api_rest/internal/validator"
 )
 
 // corresponding endpoint: "POST /v1/movies"
@@ -22,6 +23,22 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 	err := app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// Initialize a new validator instance.
+	v := validator.New()
+
+	// Copy the vaulues from the input struct into a new *Movie* struct.
+	movie := &data.Movie{
+		Title: input.Title,
+		Year: input.Year,
+		Runtime: data.Runtime(input.Runtime),
+		Genres: input.Genres,
+	}
+	// If any of the checks failed, send `422 unprocessable entity` error.
+	if data.ValidateMovie(v, movie); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
