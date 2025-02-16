@@ -27,7 +27,11 @@ type config struct {
 	port int
 	env  string
 	db	 struct {
-		dsn string	// connection string
+		dsn 			string			// connection string
+		// The following fields hold the configuration settings for the connection pool.
+		maxOpenConns	int
+		maxIdleConns	int
+		maxIdleTime		time.Duration 	//300ms, 4s, 5h27m
 	}
 }
 
@@ -48,6 +52,11 @@ func main() {
 	// Default to using the development DSN if no flag is provided.
 	// sample dsn: "postgres://<user>:<password>@localhost/<db>"
 	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("MOVIES_DB_DSN"), "PostgreSQL DSN")
+
+	// Read the connection pool settings.
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15 * time.Minute, "PostgreSQL max connection idle time")
 	flag.Parse()
 
 	// Inisitalize a new structured logger --------------------- //
@@ -57,7 +66,7 @@ func main() {
 	}))
 
 	// Create the connection pool ------------------------------ //
-	db, err := openDB(cfg.db.dsn)
+	db, err := openDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -91,12 +100,16 @@ func main() {
 }
 
 
-func openDB(dsn string) (*sql.DB, error) {
+func openDB(cfg config) (*sql.DB, error) {
 	// Create an empty connection pool.
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetMaxOpenConns(cfg.db.maxOpenConns)
+	db.SetMaxIdleConns(cfg.db.maxIdleConns)
+	db.SetConnMaxIdleTime(cfg.db.maxIdleTime)
 
 	// Create a context with a 5-sec timeout deadline.
 	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
