@@ -31,10 +31,10 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	// Copy the vaulues from the input struct into a new *Movie* struct.
 	movie := &data.Movie{
-		Title: input.Title,
-		Year: input.Year,
-		Runtime: data.Runtime(input.Runtime),
-		Genres: input.Genres,
+		Title: 		input.Title,
+		Year: 		input.Year,
+		Runtime: 	data.Runtime(input.Runtime),
+		Genres: 	input.Genres,
 	}
 	// If any of the checks failed, send `422 unprocessable entity` error.
 	if data.ValidateMovie(v, movie); !v.Valid() {
@@ -42,10 +42,20 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Dump the contents of the input struct in a HTTP response.
-	// `%+v` prints struct fields along with their names. {"title": "still alice", "year": 2014}
-	// `%v` prints the value in its default format: {"still alice", 2014}
-	fmt.Fprintf(w, "%+v\n", input)
+	err = app.models.Movies.Insert(movie)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	// Let the client know which URL the newly-created resource can be found at.
+	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", movie.ID))
+
+	err = app.writeJSON(w, envelope{"movie": movie}, http.StatusCreated, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 // corresponding endpoint: "GET /v1/movies/:id"

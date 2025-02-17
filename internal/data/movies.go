@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/heschmat/go_movies_api_rest/internal/validator"
+	"github.com/lib/pq"
 )
 
 // struct tags control how the keys appear in the JSON-encoded output.
@@ -37,4 +38,15 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(movie.Genres != nil, "genres", "must be provided")
 	v.Check(len(movie.Genres) >= 1, "genres", "must contain at least 1 genre")
 	v.Check(len(movie.Genres) <= 5, "genres", "must not contain more than 5 genres")
+}
+
+// CRUD operations ========================================================== #
+func (m MovieModel) Insert(movie *Movie) error {
+	q := `INSERT INTO movies (title, year, runtime, genres)
+	VALUES ($1, $2, $3, $4)
+	RETURNING id, created_at, version`
+
+	queryArgs := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+
+	return m.DB.QueryRow(q, queryArgs...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
