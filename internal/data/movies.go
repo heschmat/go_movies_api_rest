@@ -88,3 +88,26 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 	// Return a pointer to the *Movie* struct.
 	return &movie, nil
 }
+
+func (m MovieModel) Delete(id int64) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	q := "DELETE FROM movies WHERE id = $1"
+	result, err := m.DB.Exec(q, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+
+	return nil
+}

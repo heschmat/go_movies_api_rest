@@ -15,6 +15,7 @@ func (app *application) routes() http.Handler {
 	// Register the relevant methods, URL patterns & handler functions for our endpoints.
 	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.showMovieHandler)
+	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler)
 	router.HandlerFunc(http.MethodPost, "/v1/movies", app.createMovieHandler)
 
 	// Wrap the router with the panic recovery middleware.
