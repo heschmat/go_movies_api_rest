@@ -88,19 +88,19 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 
 		// curl -d '{"title": "creed I",}' localhost:4000/v1/movie
 		case errors.As(err, &syntaxErr):
-			msg := "1body contains badly-formed JSON (at character %d)"
+			msg := "body contains badly-formed JSON (at character %d)"
 			return fmt.Errorf(msg, syntaxErr.Offset)
 
 		case errors.Is(err, io.ErrUnexpectedEOF):
-			return errors.New("2body contains badly-formed JSON")
+			return errors.New("body contains badly-formed JSON")
 
 		case errors.As(err, &unmarshalTypeErr):
 			// curl -d '{"year": "10"}' localhost:4000/v1/movies
 			if unmarshalTypeErr.Field != "" {
-				return fmt.Errorf("3abody contains incorrect JSON type for field %q", unmarshalTypeErr.Field)
+				return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeErr.Field)
 			}
 			// curl -d '["title", "creed I"]' localhost:4000/v1/movies
-			return fmt.Errorf("3bbody contains incorrect JSON type (at character %d)", unmarshalTypeErr.Offset)
+			return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeErr.Offset)
 
 		// curl -X POST localhost:4000/v1/movies
 		case errors.Is(err, io.EOF):
