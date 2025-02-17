@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/heschmat/go_movies_api_rest/internal/data"
 	"github.com/heschmat/go_movies_api_rest/internal/validator"
@@ -67,16 +67,16 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Create a new instance of the Movie struct
-	// ID is extracted for the URL, the rest are dummy data for now.
-	movie := data.Movie{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Title:     "Creed I",
-		Year:      2015,
-		Runtime:   133,
-		Genres:    []string{"drama", "action", "boxing", "sport"},
-		Version:   1,
+	movie, err := app.models.Movies.Get(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
 
 	// Pass an *envelop map* instead of passing the plain movie struct.

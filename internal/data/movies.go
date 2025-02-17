@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/heschmat/go_movies_api_rest/internal/validator"
@@ -49,4 +50,41 @@ func (m MovieModel) Insert(movie *Movie) error {
 	queryArgs := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
 
 	return m.DB.QueryRow(q, queryArgs...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+}
+
+func (m MovieModel) Get(id int64) (*Movie, error) {
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+
+	q := `SELECT id, created_at, title, year, runtime, genres, version
+	FROM movies
+	WHERE id = $1`
+
+	var movie Movie
+
+	err := m.DB.QueryRow(q, id).Scan(
+		&movie.ID,
+		&movie.CreatedAt,
+		&movie.Title,
+		&movie.Year,
+		&movie.Runtime,
+		pq.Array(&movie.Genres),
+		&movie.Version,
+	)
+
+	// Handle the errors.
+	// If no matching movie found, .Scan() returns a *sql.ErrNoRows* error.
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+
+		default:
+			return nil, err
+		}
+	}
+
+	// Return a pointer to the *Movie* struct.
+	return &movie, nil
 }
