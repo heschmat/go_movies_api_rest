@@ -11,6 +11,7 @@ import (
 	"time"
 
 	// Import the pq driver so that it can register itself with *database/sql* package.
+	"github.com/heschmat/go_movies_api_rest/internal/data"
 	_ "github.com/lib/pq"
 )
 
@@ -39,6 +40,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	models data.Models
 }
 
 
@@ -51,7 +53,7 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	// Default to using the development DSN if no flag is provided.
 	// sample dsn: "postgres://<user>:<password>@localhost/<db>"
-	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("MOVIES_DB_DSN"), "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("MOVIESDB_DSN"), "PostgreSQL DSN")
 
 	// Read the connection pool settings.
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -81,6 +83,8 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
+		// Initialize a Models struct; passing in the connection pool as a parameter.
+		models: data.NewModels(db),
 	}
 
 	srv := &http.Server{

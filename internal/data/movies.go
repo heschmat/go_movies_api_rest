@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/heschmat/go_movies_api_rest/internal/validator"
@@ -16,6 +17,10 @@ type Movie struct {
 	Runtime   Runtime     `json:"runtime"` // Movie runtime (in minutes)
 	Genres    []string  `json:"genres"`  // Slice of genres for the movie (drama, comedy, romance ...)
 	Version   int32     `json:"version"` // starts at 1; will be incremented each time movie info is updated
+}
+
+type MovieModel struct {
+	DB *sql.DB
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {
