@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/heschmat/go_movies_api_rest/internal/validator"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -130,4 +132,45 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 	}
 
 	return nil
+}
+
+// helper functions to read query parameters ===================================== //
+func (app *application) readString(qs url.Values, key string, defautVal string) string {
+	// If no `key` exists, "" is returned.
+	s := qs.Get(key)
+
+	if s == "" {
+		return defautVal
+	}
+
+	return s
+}
+
+
+// "drama,boxing" => ["drama", "boxing"]
+func (app *application) readCSVString(qs url.Values, key string, defaultVal []string) []string {
+	s := qs.Get(key)
+	if s == "" {
+		return defaultVal
+	}
+
+	return strings.Split(s, ",")
+}
+
+// If the value couldn't be converted to an integer,
+// we'll add an error message in the provided *Validator* instance.
+func (app *application) readInt(qs url.Values, key string, defaultVal int, v *validator.Validator) int {
+	s := qs.Get(key)
+
+	if s == "" {
+		return defaultVal
+	}
+
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultVal
+	}
+
+	return i
 }
